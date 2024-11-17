@@ -1,5 +1,6 @@
 import os
 import requests
+from datetime import datetime
 
 def get_bep20_transactions(wallet_address):
     """Fetch all BEP20 transactions for a given wallet address."""
@@ -26,10 +27,15 @@ def get_bep20_transactions(wallet_address):
 
     return transactions
 
-def classify_transactions(transactions):
+def classify_transactions(transactions, wallet_address):
     """Classify transactions into valid and invalid based on specific criteria."""
     valid_transactions = []
     invalid_transactions = []
+    # valid_tokens =  ['BSC-USD', 'USDC', 'LDOGE', 'BNB']
+    valid_tokens_env = os.getenv('VALID_TOKENS', '')
+    valid_tokens = valid_tokens_env.split(',') if valid_tokens_env else []
+    # tokens_nonce = {token: 0 for token in valid_tokens}
+    tokens_nonce = 0
 
     for tx in transactions:
         tx_hash = tx['hash']
@@ -38,9 +44,25 @@ def classify_transactions(transactions):
         value = int(tx['value']) / (10 ** int(tx['tokenDecimal']))  # Convert value to human-readable format
         confirmations = int(tx['confirmations'])
         token_symbol = tx['tokenSymbol']
+        decimal = int(tx['tokenDecimal'])
+        status = tx.get('status', 'unknown')
+        nonce = int(tx['nonce'])
+        if nonce == 0:
+            nonce = 1
+        nonce_valid = True
+        
+        if token_symbol in valid_tokens:
+            if from_address == wallet_address.lower():
+                nonce_valid = False
+                if nonce - tokens_nonce == 1:
+                    nonce_valid = True
+                    tokens_nonce = nonce
+
+        # if token_symbol == 'BNB':
+        #     print(tx_hash,from_address,to_address,value,tx['tokenDecimal'],confirmations,token_symbol,datetime.fromtimestamp(int(tx['timeStamp'])).strftime('%Y-%m-%d %H:%M:%S'),tx['blockNumber'],tx['gasUsed'],tx['gasPrice'],tx['input'],status,tx['nonce'])
 
         if (tx_hash and from_address and to_address and value > 0 
-                and confirmations > 0 and token_symbol == 'BSC-USD'):
+                and confirmations > 0 and (token_symbol in valid_tokens) and nonce_valid):
             valid_transactions.append(tx)
         else:
             invalid_transactions.append(tx)
@@ -49,26 +71,16 @@ def classify_transactions(transactions):
 
 def calculate_balance_and_usd(valid_transactions, wallet_address):
     """Calculate total balance and USD value from valid transactions."""
-    total_balance = 0.0
-    # total_usd_value = 0.0
-
-    # conversion_rates = {
-    #     'BSC-USD': 1.0,  # Example conversion rate; replace with actual rates as needed.
-    # }
+    valid_tokens_env = os.getenv('VALID_TOKENS', '')
+    valid_tokens = valid_tokens_env.split(',') if valid_tokens_env else []
+    total_balance = {token: 0.0 for token in valid_tokens}
 
     for tx in valid_transactions:
         value_in_tokens = int(tx['value']) / (10 ** int(tx['tokenDecimal']))
-                
-        # token_symbol = tx['tokenSymbol']
-        
-        # usd_value_per_token = conversion_rates.get(token_symbol, 0)
         
         if tx['to'] == wallet_address.lower():
-            total_balance += value_in_tokens
-            # total_usd_value += value_in_tokens * usd_value_per_token
+            total_balance[tx['tokenSymbol']] += value_in_tokens
         else:
-            total_balance -= value_in_tokens
-            # total_usd_value -= value_in_tokens * usd_value_per_token
+            total_balance[tx['tokenSymbol']] -= value_in_tokens
             
-    # return total_balance, total_usd_value
     return total_balance
