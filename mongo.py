@@ -13,3 +13,6 @@ def find_user(user_id):
 def add_or_update_user(user_id, wallet_address):
     """Add a new user or update an existing user's wallet address."""
     collection.update_one({"user_id": user_id}, {"$set": {"wallet_address": wallet_address}}, upsert=True)
+
+def check_user_paid(user_id):
+    return False

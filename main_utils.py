@@ -84,3 +84,6 @@ def calculate_balance_and_usd(valid_transactions, wallet_address):
             total_balance[tx['tokenSymbol']] -= value_in_tokens
             
     return total_balance
+
+def verify_user_payment(wallet_address, hash_code):
+    return False
