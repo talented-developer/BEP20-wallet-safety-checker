@@ -1,6 +1,7 @@
 import os
 import asyncio
 import telegram
+from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CallbackQueryHandler, MessageHandler, filters
 from datetime import datetime
@@ -10,6 +11,8 @@ from main_utils import get_bep20_transactions, classify_transactions, calculate_
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     user = find_user(user_id)  # Fetch the user from the database
+
+    load_dotenv()
     
     keyboard = []
     
@@ -28,6 +31,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         f"🗓 Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n\n👋 Welcome!\n\n💼 Your BEP20 Wallet Address: {user['wallet_address'] if user else 'Not set'}\n", 
         reply_markup=reply_markup
     )
+
+    # Send the user's ID to the admin
+    admin_user_id = os.getenv("ADMIN_ID")
+    await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) started the bot.")
+
 
 async def set_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
@@ -168,6 +176,10 @@ async def check_invalid_transactions(update: Update, context: ContextTypes.DEFAU
                 f"transactions with zero volume.\nThis provides the most objective information about the wallet."
             )
             await update.callback_query.message.reply_text(response_message)
+
+        load_dotenv()
+        admin_user_id = os.getenv("ADMIN_ID")
+        await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) checked safety of his wallet.\nHis wallet address is `{wallet_address}`")
 
     else:
         await update.callback_query.message.reply_text("❌ No wallet address found.")
