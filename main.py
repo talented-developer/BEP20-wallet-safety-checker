@@ -1,3 +1,4 @@
+import httpx
 import os
 import asyncio
 from dotenv import load_dotenv
@@ -10,6 +11,8 @@ from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandle
 load_dotenv()
 
 def run_bot():
+    timeout = httpx.Timeout(10.0, connect=5.0)
+    
     application = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
 
     application.add_handler(CommandHandler("start", start))

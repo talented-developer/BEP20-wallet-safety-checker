@@ -1,7 +1,6 @@
 import os
 import asyncio
 import telegram
-from dotenv import load_dotenv
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes, CallbackQueryHandler, MessageHandler, filters
 from datetime import datetime
@@ -11,8 +10,6 @@ from main_utils import get_bep20_transactions, classify_transactions, calculate_
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
     user = find_user(user_id)  # Fetch the user from the database
-
-    load_dotenv()
     
     keyboard = []
     
@@ -26,7 +23,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     reply_markup = InlineKeyboardMarkup(keyboard)
 
-    await update.message.reply_photo(photo=open('img/mark.webp', 'rb'))  # Send image
+    # await update.message.reply_photo(photo=open('img/mark.webp', 'rb'))  # Send image
+
+    try:
+        with open('img/mark.webp', 'rb') as photo:
+            await update.message.reply_photo(photo=photo)
+    except Exception as e:
+        print(f"Error occurred: {str(e)}")
+
     await update.message.reply_text(
         f"🗓 Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
         f"👋 Welcome!\n\n"
@@ -64,25 +68,31 @@ async def check_valid_transactions(update: Update, context: ContextTypes.DEFAULT
         
         valid_transactions, invalid_transactions = classify_transactions(transactions, wallet_address)
         total_balance = calculate_balance_and_usd(valid_transactions, wallet_address)
-        
-        response_message = (
-            f"✅ Total Valid Transactions: {len(valid_transactions)}\n\n"
-            f"💰 Total Balance:\n"
-        )
 
         valid_tokens_env = os.getenv('VALID_TOKENS', '')
         valid_tokens = valid_tokens_env.split(',') if valid_tokens_env else []
 
-        for token in valid_tokens:
-            response_message += f"{token}: {total_balance[token]}\n"
+        response_message = "\n💰 Total Balance:\n\n"
 
-        response_message += "\n\n📜 Valid Transactions:\n"
+        for token in valid_tokens:
+            if total_balance[token] != 0:
+                response_message += f"{token}: {total_balance[token]}\n"
+
+        await update.callback_query.message.reply_text(response_message, parse_mode='Markdown')
+
+        response_message = f"✅ Total Valid Transactions: {len(valid_transactions)}\n\n"
+
         message_count = 0
         for tx in valid_transactions:
             transaction_date = datetime.utcfromtimestamp(int(tx['timeStamp'])).strftime('%Y-%m-%d %H:%M:%S')
-            response_message += (f"💳 Hash: `{tx['hash']}`, From: `{tx['from']}`, To: `{tx['to']}`, "
+            in_out_symbol = ""
+            if wallet_address == tx['from']:
+                in_out_symbol = "💳➡️"
+            if wallet_address == tx['to']:
+                in_out_symbol = "➡️💳"
+            response_message += (f"{in_out_symbol} Hash: `{tx['hash']}`, From: `{tx['from']}`, To: `{tx['to']}`, "
                                  f"Value: `{int(tx['value']) / (10 ** int(tx['tokenDecimal'])):.6f} {tx['tokenSymbol']}`, "
-                                 f"Date: `{transaction_date}`\n")
+                                 f"Date: `{transaction_date}` {tx['nonce']}\n")
             message_count+=1
             if message_count == 15:
                 try:
@@ -106,7 +116,7 @@ async def check_invalid_transactions(update: Update, context: ContextTypes.DEFAU
     user = find_user(user_id)
 
     if user:
-        if check_user_paid(user["wallet_address"]):
+        if check_user_paid(user_id):
             response_message = "⏳ Please wait a moment while we retrieve and analyze all invalid transactions made using your wallet from the BSC blockchain network.\n\nThe longer your wallet has been created and the more transactions your wallet has had, the longer it will take to search for transactions from your wallet."
             await update.callback_query.message.reply_text(response_message)
 
@@ -129,8 +139,13 @@ async def check_invalid_transactions(update: Update, context: ContextTypes.DEFAU
                 transaction_date = datetime.utcfromtimestamp(int(tx['timeStamp'])).strftime('%Y-%m-%d %H:%M:%S')
                 transaction_value = int(tx['value']) / (10 ** int(tx['tokenDecimal']))
                 # if tx['tokenSymbol'] not in valid_tokens:
+                in_out_symbol = ""
+                if wallet_address == tx['from']:
+                    in_out_symbol = "💳➡️"
+                if wallet_address == tx['to']:
+                    in_out_symbol = "➡️💳"
                 if transaction_value > 0:
-                    response_message += (f"💳 Hash: `{tx['hash']}`, From: `{tx['from']}`, To: `{tx['to']}`, "
+                    response_message += (f"{in_out_symbol} Hash: `{tx['hash']}`, From: `{tx['from']}`, To: `{tx['to']}`, "
                                         f"Value: `{transaction_value:.6f} {tx.get('tokenSymbol', 'N/A')}`, "
                                         f"Date: `{transaction_date}`\n")
                     if tx['tokenSymbol'] not in invalid_tokens:
@@ -178,18 +193,15 @@ async def check_invalid_transactions(update: Update, context: ContextTypes.DEFAU
                     "If the spam transactions are connected to illegitimate tokens or untrustworthy projects, "
                     "those tokens can cause problems for your wallet.\n\n🔒 Your wallet is therefore not secure.\n\n"
                     "🚨 We recommend that you transfer funds from your BEP20 wallet to another safe and reliable wallet at the appropriate time.\n\n"
-                    "ℹ️  You may see many invalid transactions from your wallet on some sites, but most sites do not show invalid transactions, "
-                    "which are difficult to analyze.\nHowever, we show all invalid transactions except valid transactions and invalid "
-                    "transactions with zero volume.\n🌟 This provides the most objective information about the wallet."
+                    # "ℹ️  You may see many invalid transactions from your wallet on some sites, but most sites do not show invalid transactions, "
+                    # "which are difficult to analyze.\nHowever, we show all invalid transactions except valid transactions and invalid "
+                    # "transactions with zero volume.\n🌟 This provides the most objective information about the wallet."
                 )
                 await update.callback_query.message.reply_text(response_message)
 
-            load_dotenv()
             admin_user_id = os.getenv("ADMIN_ID")
             await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) checked safety of his wallet.\nHis wallet address is `{wallet_address}`")
         else:
-            load_dotenv()
-
             admin_wallet_address = os.getenv("WALLET_ADDRESS")
             response_message = (
                 "⚠️ You need to pay at least 10 USDT to check the security of your wallet.\n\n"
@@ -212,7 +224,7 @@ async def check_invalid_transactions(update: Update, context: ContextTypes.DEFAU
                 f"💳 Our Tether USD Address on BSC Network is as follows.\n\n`{admin_wallet_address}`\n\n"
                 "💵 You can also pay with USDC instead of USDT.\n\n"
                 "🚨 After completing the payment, please enter the hash value of the payment "
-                "below and click the check button again on the home screen."
+                "below⬇️ and click the check button again on the home screen."
             )
             await update.callback_query.message.reply_text(response_message, parse_mode='Markdown')
 
@@ -230,7 +242,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         hash_code = update.message.text.strip()
         user = find_user(user_id)
         await update.message.reply_text("⏳ Please wait a moment while we verify your transaction.")
-        verify_result = verify_user_payment(user['wallet_address'], hash_code)
+        verify_result = verify_user_payment(user_id, user['wallet_address'], hash_code)
         if verify_result:
             response_message = "✅ Your payment has been verified correctly.\n\n🔄 To check the safety of your wallet, please click the check button again on the home screen within 30 minutes."
             await update.message.reply_text(response_message)
