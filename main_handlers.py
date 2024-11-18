@@ -15,8 +15,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     if user:
         wallet_address = user['wallet_address']
-        keyboard.append([InlineKeyboardButton("✅ View balance and transactions", callback_data='check_valid_transactions')])
-        keyboard.append([InlineKeyboardButton("❌ Safety check", callback_data='check_invalid_transactions')])
+        keyboard.append([InlineKeyboardButton("💰 View balance and transactions", callback_data='check_valid_transactions')])
+        keyboard.append([InlineKeyboardButton("✅ Safety check", callback_data='check_invalid_transactions')])
         keyboard.append([InlineKeyboardButton("🔄 Change Wallet Address", callback_data='change_wallet')])
     else:
         keyboard.append([InlineKeyboardButton("✏️ Register Wallet Address", callback_data='set_wallet')])
@@ -33,7 +33,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
     await update.message.reply_text(
         f"🗓 Current date and time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
-        f"👋 Welcome!\n\n"
+        "👋 Welcome!\n\n Check the safety of your wallet normally and manage all your financial assets safely.\n\n"
         f"💼 Your BEP20 Wallet Address: {user['wallet_address'] if user else '❌ Not set'}\n",
         reply_markup=reply_markup
     )
@@ -45,11 +45,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 
 async def set_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
-    await update.callback_query.message.reply_text("🔒 Please send me your BEP20 wallet address.")
+    await update.callback_query.message.reply_text("👇 Please send me your BEP20 wallet address.")
 
 async def change_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
-    await update.callback_query.message.reply_text("🔄 Please send me your new BEP20 wallet address.")
+    await update.callback_query.message.reply_text("👇 Please send me your new BEP20 wallet address.")
 
 async def check_valid_transactions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
@@ -224,30 +224,48 @@ async def check_invalid_transactions(update: Update, context: ContextTypes.DEFAU
                 f"💳 Our Tether USD Address on BSC Network is as follows.\n\n`{admin_wallet_address}`\n\n"
                 "💵 You can also pay with USDC instead of USDT.\n\n"
                 "🚨 After completing the payment, please enter the hash value of the payment "
-                "below⬇️ and click the check button again on the home screen."
+                "below👇👇👇 and click the check button again on the home screen."
             )
             await update.callback_query.message.reply_text(response_message, parse_mode='Markdown')
 
     else:
         await update.callback_query.message.reply_text("❌ No wallet address found.")
-#
+
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
 
-    if update.message.text.startswith('0x') and len(update.message.text) == 42:
+    if update.message.text.startswith('0x') and len(update.message.text) == 42:  # Valid wallet address
         wallet_address = update.message.text.strip()
         add_or_update_user(user_id, wallet_address)
         await update.message.reply_text("✅ Wallet address updated/set successfully!")
-    elif update.message.text.startswith('0x') and len(update.message.text) == 66:
+        
+        await asyncio.sleep(3)
+
+        # Automatically call start function after setting wallet address
+        await start(update, context)
+
+    elif update.message.text.startswith('0x') and len(update.message.text) == 66:  # Valid hash code
         hash_code = update.message.text.strip()
         user = find_user(user_id)
+        
         await update.message.reply_text("⏳ Please wait a moment while we verify your transaction.")
+        
         verify_result = verify_user_payment(user_id, user['wallet_address'], hash_code)
+        
         if verify_result:
             response_message = "✅ Your payment has been verified correctly.\n\n🔄 To check the safety of your wallet, please click the check button again on the home screen within 30 minutes."
             await update.message.reply_text(response_message)
+            
+            await asyncio.sleep(3)
+
+            # Automatically call start function after verifying payment
+            await start(update, context)
+            
         else:
             response_message = "❌ Your payment could not be verified.\n\n🙏 Please check the hash code again and enter it again."
             await update.message.reply_text(response_message)
+
     else:
         await update.message.reply_text("❗ Please enter a valid BEP20 wallet address starting with '0x'.")
+
+# Ensure to register handle_message in your dispatcher for handling text messages.
