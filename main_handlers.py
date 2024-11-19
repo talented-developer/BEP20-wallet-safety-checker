@@ -15,10 +15,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     
     if user:
         wallet_address = user['wallet_address']
+        keyboard.append([InlineKeyboardButton("🚨 Necessity of safety check", callback_data='show_necessity')])
         keyboard.append([InlineKeyboardButton("💰 View balance and transactions", callback_data='check_valid_transactions')])
         keyboard.append([InlineKeyboardButton("✅ Safety check", callback_data='check_invalid_transactions')])
         keyboard.append([InlineKeyboardButton("🔄 Change Wallet Address", callback_data='change_wallet')])
     else:
+        keyboard.append([InlineKeyboardButton("🚨 Necessity of safety check", callback_data='show_necessity')])
         keyboard.append([InlineKeyboardButton("✏️ Register Wallet Address", callback_data='set_wallet')])
 
     reply_markup = InlineKeyboardMarkup(keyboard)
@@ -41,6 +43,26 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     # Send the user's ID to the admin
     admin_user_id = os.getenv("ADMIN_ID")
     await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) started the bot.")
+
+
+async def show_necessity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    response_message = (
+        "🚨 **Necessity of Safety Check** 🚨\n\n"
+        "🔍 No matter which wallet app you use, the wallet app only shows you **valid transaction history**.\n\n"
+        "❗ In other words, it does not show **invalid transaction history**.\n"
+        "Of course, among the invalid transactions, there are also transactions that were created temporarily or as a supplement for transactions you have already made in the past, so there are many transactions that do not actually need to be shown to you.\n"
+        "However, sometimes among the invalid transactions, there may be **spam transactions** and **fake transactions** that are created as a result of hacking attempts, including spoofing.\n"
+        "🚫 These transactions may be created with fraudulent or invalid tokens, or sometimes they may be created with valid tokens such as USDC.\n"
+        "⚠️ Sometimes, some transactions are made valid by targeting weaknesses in some wallet apps or the blockchain network, but most of them are detected and blocked in advance by the role of the security team, or they are transactions that are recovered after the fraudulent transaction occurred.\n"
+        "🔒 In this case, the wallet app or blockchain network security team hides this fact as much as possible and does not show the transaction history to the users so as not to destroy the trust of the users in the blockchain network.\n"
+        "⚠️ However, hackers do not give up hacking the blockchain network they have targeted regardless, and if your wallet address is already on their target address list, it is very dangerous.\n"
+        "💔 There are countless cases of wallets being stolen by hackers, but accurate statistics cannot be obtained, and in many cases, the facts may be hidden.\n"
+        "📊 Among them, reports that analyzed only the reported data indicate that there are thousands to tens of thousands of cryptocurrency wallet theft cases every year, and the resulting losses are estimated to exceed several billion dollars.\n"
+        "💰 However, some believe that the actual losses are several times or more than that.\n\n"
+        "🔍 Ultimately, it is important to accurately determine whether your wallet is on the list of hackers' target addresses and whether hackers have attempted to hack your wallet, and to prepare countermeasures in advance.\n\n"
+        "🤖 You can get help with that problem through this bot.\n"        
+    )
+    await update.callback_query.message.reply_text(response_message, parse_mode='Markdown')
 
 
 async def set_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

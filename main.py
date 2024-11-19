@@ -3,7 +3,7 @@ import os
 import asyncio
 from dotenv import load_dotenv
 from telegram.ext import ApplicationBuilder
-from main_handlers import start, set_wallet, change_wallet, check_valid_transactions, check_invalid_transactions, handle_message
+from main_handlers import start, show_necessity, set_wallet, change_wallet, check_valid_transactions, check_invalid_transactions, handle_message
 from telegram.ext import ApplicationBuilder, CommandHandler, CallbackQueryHandler, MessageHandler, filters, ContextTypes
 
 
@@ -12,10 +12,11 @@ load_dotenv()
 
 def run_bot():
     timeout = httpx.Timeout(10.0, connect=5.0)
-    
+
     application = ApplicationBuilder().token(os.getenv("TELEGRAM_TOKEN")).build()
 
     application.add_handler(CommandHandler("start", start))
+    application.add_handler(CallbackQueryHandler(show_necessity, pattern='show_necessity'))
     application.add_handler(CallbackQueryHandler(set_wallet, pattern='set_wallet'))
     application.add_handler(CallbackQueryHandler(change_wallet, pattern='change_wallet'))
     application.add_handler(CallbackQueryHandler(check_valid_transactions, pattern='check_valid_transactions'))
