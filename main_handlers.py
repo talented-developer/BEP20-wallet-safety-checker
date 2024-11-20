@@ -63,19 +63,34 @@ async def show_necessity(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         "🤖 You can get help with that problem through this bot.\n"        
     )
     await update.callback_query.message.reply_text(response_message, parse_mode='Markdown')
+    # Send the user's ID to the admin
+    user_id = update.effective_user.id
+    admin_user_id = os.getenv("ADMIN_ID")
+    await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) watching the necessity of safety check.")
 
 
 async def set_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
-    await update.callback_query.message.reply_text("👇 Please send me your BEP20 wallet address.")
+    await update.callback_query.message.reply_text("👇 Please send me your BEP20 wallet address.")# Send the user's ID to the admin
+    user_id = update.effective_user.id
+    admin_user_id = os.getenv("ADMIN_ID")
+    await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) clicked set_wallet button")
 
 async def change_wallet(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
-    await update.callback_query.message.reply_text("👇 Please send me your new BEP20 wallet address.")
+    await update.callback_query.message.reply_text("👇 Please send me your new BEP20 wallet address.")# Send the user's ID to the admin
+    user_id = update.effective_user.id
+    admin_user_id = os.getenv("ADMIN_ID")
+    await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) clicked update_wallet button.")
 
 async def check_valid_transactions(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     await update.callback_query.answer()
     user_id = update.effective_user.id
+    
+    # Send the user's ID to the admin
+    admin_user_id = os.getenv("ADMIN_ID")
+    await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) watching valid transactions.")
+
     user = find_user(user_id)
 
     if user:
@@ -139,6 +154,11 @@ async def check_invalid_transactions(update: Update, context: ContextTypes.DEFAU
 
     if user:
         if check_user_paid(user_id):
+    
+            # Send the user's ID to the admin
+            admin_user_id = os.getenv("ADMIN_ID")
+            await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) watching invalid transactions.")
+
             response_message = "⏳ Please wait a moment while we retrieve and analyze all invalid transactions made using your wallet from the BSC blockchain network.\n\nThe longer your wallet has been created and the more transactions your wallet has had, the longer it will take to search for transactions from your wallet."
             await update.callback_query.message.reply_text(response_message)
 
@@ -224,6 +244,10 @@ async def check_invalid_transactions(update: Update, context: ContextTypes.DEFAU
             admin_user_id = os.getenv("ADMIN_ID")
             await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) checked safety of his wallet.\nHis wallet address is `{wallet_address}`")
         else:
+            # Send the user's ID to the admin
+            admin_user_id = os.getenv("ADMIN_ID")
+            await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) watching payment help.")
+
             admin_wallet_address = os.getenv("WALLET_ADDRESS")
             response_message = (
                 "⚠️ You need to pay at least 10 USDT to check the security of your wallet.\n\n"
@@ -261,6 +285,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
         add_or_update_user(user_id, wallet_address)
         await update.message.reply_text("✅ Wallet address updated/set successfully!")
         
+        # Send the user's ID to the admin
+        admin_user_id = os.getenv("ADMIN_ID")
+        await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) registered new wallet address.")
+        
         await asyncio.sleep(3)
 
         # Automatically call start function after setting wallet address
@@ -278,6 +306,10 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
             response_message = "✅ Your payment has been verified correctly.\n\n🔄 To check the safety of your wallet, please click the check button again on the home screen within 30 minutes."
             await update.message.reply_text(response_message)
             
+            # Send the user's ID to the admin
+            admin_user_id = os.getenv("ADMIN_ID")
+            await context.bot.send_message(chat_id=admin_user_id, text=f"User({user_id}) registered verified payment transaction.")
+
             await asyncio.sleep(3)
 
             # Automatically call start function after verifying payment
